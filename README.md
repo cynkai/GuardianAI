@@ -14,7 +14,7 @@ This project explored whether LLMs can assist log review.
 
 ## Demo
 
-![LLM Red Team Scanner Demo](demo.png)
+![LLM Red Team Scanner Demo](assets/scanner_demo.png)
 
 ## Tech Stack
 - Python
