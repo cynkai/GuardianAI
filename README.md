@@ -1,7 +1,7 @@
 # LLM-based Security Log Analysis Assistant
 
 ## Overview
-A hackathon prototype exploring LLM-assisted security log analysis.
+A prototype security analysis assistant that uses LLMs to analyze logs, identify suspicious patterns, and provide explanations for security analysts.
 
 ## Motivation
 Security analysts often need to review large volumes of logs.
@@ -12,28 +12,31 @@ This project explored whether LLMs can assist log review.
 ![LLM Red Team Scanner Demo](assets/scanner_demo.png)
 
 ## Features
-- Log input interface
-- LLM-based log summarization
-- Suspicious pattern explanation
+
+- Security log input and analysis interface
+- LLM-based suspicious behavior analysis
+- Attack pattern explanation
+- Security report generation
 
 ## Architecture
 
 ```text
-Security Test Payloads
-          |
-          v
-LLM Red Team Scanner
-          |
-          v
+Security Logs
+      |
+      v
+Log Analysis Interface
+      |
+      v
 Gemini API
-          |
-          v
-Analysis Result
-          |
-          +--> Risk Classification
-          |
-          +--> Attack Explanation
-```
+      |
+      v
+LLM-based Security Analysis
+      |
+      +--> Threat Classification
+      |
+      +--> Risk Assessment
+      |
+      +--> Explanation Report
 
 ## Tech Stack
 
@@ -54,3 +57,9 @@ Analysis Result
 This project was developed as a hackathon prototype.
 
 The goal was to explore LLM-assisted security analysis workflows, not to build a production-level security scanner.
+
+## Future Work
+
+- Integration with real security logs
+- Improving detection accuracy with security datasets
+- Cloud-based log monitoring integration
