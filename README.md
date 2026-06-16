@@ -12,6 +12,10 @@ This project explored whether LLMs can assist log review.
 - LLM-based log summarization
 - Suspicious pattern explanation
 
+## Demo
+
+![LLM Red Team Scanner Demo](scanner_demo.png)
+
 ## Tech Stack
 - Python
 - LLM API
