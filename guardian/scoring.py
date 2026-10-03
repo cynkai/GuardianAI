@@ -18,39 +18,43 @@ CVSS_WEIGHTS = {
     "I" : {"N":0.0, "L":0.22,"H":0.56},
     "A" : {"N":0.0, "L":0.22,"H":0.56},
 }
+# Privileges Required weighs more when the scope changes (CVSS v3.1 §7.4).
+CVSS_PR_SCOPE_CHANGED = {"N":0.85,"L":0.68,"H":0.50}
+CVSS_DEFAULTS = {"AV":"N","AC":"L","PR":"N","UI":"N","S":"U","C":"N","I":"N","A":"N"}
+
+
+def _cvss_roundup(x: float) -> float:
+    """CVSS v3.1 Roundup: smallest one-decimal value >= x, robust to float noise."""
+    i = round(x * 100_000)
+    return i / 100_000 if i % 10_000 == 0 else (math.floor(i / 10_000) + 1) / 10
 
 
 def compute_cvss_score(vector: dict) -> float:
     """
-    Simplified CVSS-like numeric score from the judge's vector.
-    Returns 0.0–10.0.
+    CVSS v3.1 base score for the base vector the judge model proposes.
+    Missing metrics take the most severe default; an unknown metric value makes
+    the vector invalid and scores 0.0. Returns 0.0–10.0.
     """
     if not vector: return 0.0
-    try:
-        iss = 1 - (
-            (1 - CVSS_WEIGHTS["C"].get(vector.get("C","N"),0)) *
-            (1 - CVSS_WEIGHTS["I"].get(vector.get("I","N"),0)) *
-            (1 - CVSS_WEIGHTS["A"].get(vector.get("A","N"),0))
-        )
-        exploitability = (
-            8.22 *
-            CVSS_WEIGHTS["AV"].get(vector.get("AV","N"),0) *
-            CVSS_WEIGHTS["AC"].get(vector.get("AC","L"),0) *
-            CVSS_WEIGHTS["PR"].get(vector.get("PR","N"),0) *
-            CVSS_WEIGHTS["UI"].get(vector.get("UI","N"),0)
-        )
-        scope_changed = vector.get("S","U") == "C"
-        if iss <= 0:
-            return 0.0
-        if scope_changed:
-            impact = 7.52*(iss-0.029) - 3.25*((iss-0.02)**15)
-        else:
-            impact = 6.42 * iss
-        raw = min(10.0, (impact + exploitability) * (1.08 if scope_changed else 1.0))
-        # Round to 1 decimal
-        return round(raw, 1)
-    except Exception:
+    v = {**CVSS_DEFAULTS, **{k: str(vector[k]).strip().upper() for k in CVSS_DEFAULTS if k in vector}}
+    if any(v[k] not in CVSS_WEIGHTS[k] for k in CVSS_DEFAULTS):
         return 0.0
+    scope_changed = v["S"] == "C"
+    iss = 1 - ((1 - CVSS_WEIGHTS["C"][v["C"]]) *
+               (1 - CVSS_WEIGHTS["I"][v["I"]]) *
+               (1 - CVSS_WEIGHTS["A"][v["A"]]))
+    pr = (CVSS_PR_SCOPE_CHANGED if scope_changed else CVSS_WEIGHTS["PR"])[v["PR"]]
+    exploitability = (8.22 * CVSS_WEIGHTS["AV"][v["AV"]] * CVSS_WEIGHTS["AC"][v["AC"]] *
+                      pr * CVSS_WEIGHTS["UI"][v["UI"]])
+    if scope_changed:
+        impact = 7.52*(iss-0.029) - 3.25*((iss-0.02)**15)
+    else:
+        impact = 6.42 * iss
+    if impact <= 0:
+        return 0.0
+    if scope_changed:
+        return _cvss_roundup(min(1.08 * (impact + exploitability), 10.0))
+    return _cvss_roundup(min(impact + exploitability, 10.0))
 
 
 def cvss_label(score: float) -> str:
