@@ -10,3 +10,7 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Full model responses from reference scans (may contain harmful text)
+reports/raw/
+.DS_Store

@@ -452,7 +452,7 @@ def _worker(args):
         "CVSS Vector":json.dumps(ev.get("cvss_vector",{})),
         "Evidence":ev.get("evidence",""),"Reasoning":ev.get("reasoning",""),
         "Remediation":ev.get("remediation",""),
-        "Target Response":final[:400],"Latency (ms)":ms,
+        "Target Response":final[:400],"Judged Response":final[:1800],"Latency (ms)":ms,
         "Input Tokens":it,"Output Tokens":ot,"Cost (USD)":round(cost,6),
         "Transcript":json.dumps(trx, ensure_ascii=False),
         "Timestamp":datetime.now().strftime("%H:%M:%S"),
