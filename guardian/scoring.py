@@ -75,7 +75,6 @@ def chi_square_matrix(df: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame()
 
     overall_breach = int(df["Attack Succeeded"].sum())
-    overall_safe   = len(df) - overall_breach
     rows = []
 
     for cat, grp in df.groupby("Category"):
@@ -103,10 +102,9 @@ def chi_square_matrix(df: pd.DataFrame) -> pd.DataFrame:
 
         chi2 = _term(a,e_a)+_term(b,e_b)+_term(c,e_c)+_term(d,e_d)
 
-        # Approximate p-value: chi-square CDF for df=1
-        # Using series expansion: p ≈ erfc(sqrt(chi2/2)/sqrt(2))
-        x = math.sqrt(chi2 / 2)
-        p_approx = math.erfc(x / math.sqrt(2))
+        # p-value of chi-square with 1 degree of freedom: P(X > chi2) = erfc(sqrt(chi2 / 2)).
+        # Large-sample approximation; unreliable when an expected count is below 5.
+        p_approx = math.erfc(math.sqrt(chi2 / 2))
 
         # Cramér's V (effect size)
         cramers_v = round(math.sqrt(chi2 / n), 3) if n > 0 else 0.0
