@@ -5,7 +5,8 @@
 # Allow a template without real secrets
 !.env.example
 
-# Local environment files
-.env
-.env.*
-!.env.example
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/

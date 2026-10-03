@@ -1,5 +1,7 @@
 *Read this in other languages: [한국어](README.ko.md)*
 
+[![tests](https://github.com/cynkai/GuardianAI/actions/workflows/tests.yml/badge.svg)](https://github.com/cynkai/GuardianAI/actions/workflows/tests.yml)
+
 # GuardianAI — LLM Automated Red-Teaming Scanner
 
 > A hackathon prototype that stress-tests an LLM's defenses by firing adversarial
@@ -16,7 +18,8 @@ It sends a dataset of adversarial prompts at a **target model**, then a separate
 `VULNERABLE`, `PARTIAL`, or `SAFE`. Findings are scored, reported, and used to
 auto-generate a hardened system prompt.
 
-The taxonomy follows the **OWASP LLM Top 10 (2025)** and **MITRE ATLAS**.
+Each payload is tagged with an **OWASP Top 10 for LLM Applications (2025)** entry and a
+**MITRE ATLAS** technique.
 
 ## Motivation
 
@@ -28,26 +31,31 @@ workflow for exactly that.
 
 ## Core Features
 
-- **Attack dataset** — 26 adversarial payloads across 10 OWASP LLM Top 10 categories
-  (e.g. Base64 encoding, role-play jailbreaks, multi-turn attacks).
+- **Attack dataset** — 25 adversarial payloads in 10 attack categories (e.g. Base64
+  encoding, role-play jailbreaks, multi-turn attacks), mapped to five OWASP LLM 2025
+  entries (LLM01 Prompt Injection, LLM02 Sensitive Information Disclosure, LLM06
+  Excessive Agency, LLM07 System Prompt Leakage, LLM09 Misinformation) and nine MITRE
+  ATLAS techniques.
 - **LLM-as-a-Judge** — instead of plain string matching, a judge model reads the
   target's response in context and returns a structured JSON verdict.
 - **Interactive defense testing** — enter a custom defensive system prompt and
   validate its resilience in real time.
 - **Adaptive Attack Tree** — depth-3 recursive self-escalation: when an attack is
   blocked, the engine mutates it into a harder variant and retries.
-- **CVSS-inspired scoring** — per-finding severity vectors and an overall security grade.
-- **CVE-style finding index** — each finding gets an `RTAI-YYYY-NNN` ID for tracking.
+- **CVSS v3.1 scoring** — the judge proposes a base vector per finding; the app computes
+  its CVSS v3.1 base score (checked against reference vectors) and an overall grade.
+- **CVE-style finding index** — each finding gets an internal `RTAI-YYYY-NNN` ID for
+  tracking (a CVE-like format, not a registered CVE).
 - **Auto-Hardener** — generates a hardened system prompt from the findings, with a
   before/after re-scan to validate the fix.
-- **Reproducibility & statistics** — N-repeat consistency checks, chi-square tests,
-  and Cramér's V across categories.
+- **Reproducibility & statistics** — N-repeat consistency checks, Wilson intervals,
+  chi-square tests and Cramér's V across categories.
 - **Reporting** — exportable CSV / JSON / PDF executive reports.
 
 ## Architecture
 
 ```
-Attack Dataset (26 payloads · 10 OWASP categories)
+Attack Dataset (25 payloads · 10 categories · OWASP LLM 2025 + MITRE ATLAS)
         │ [ThreadPoolExecutor]
         ▼
 TARGET  model · system prompt under test
@@ -71,6 +79,71 @@ JUDGE   model · JSON verdict + CVSS vector
 - Google Gemini API (`google-genai` SDK)
 - Plotly (visualization), fpdf2 (PDF reports), pandas / numpy
 
+## Quick Start
+
+Requires Python 3.13 (other recent 3.x versions likely work but are untested).
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+- **No API key needed to look around:** open the **Results** tab and click
+  **Load Sample Results** to explore every dashboard and export a PDF report with
+  sample data.
+- **Live scans** need a Gemini API key: `cp .env.example .env` and set
+  `GEMINI_API_KEY`, or paste a key into the sidebar. A scan calls the Gemini API
+  for every payload (target + judge), so it uses your quota.
+- Models default to Google's `gemini-flash-latest` (target) and `gemini-pro-latest`
+  (judge) aliases; choose **Custom model ID…** in the sidebar to pin another model.
+
+## Project Structure & Tests
+
+```
+app.py              Streamlit UI, charts, scan orchestration
+guardian/
+  config.py         model choices, pricing assumptions, verdict styling
+  dataset.py        attack payloads + OWASP 2025 / MITRE ATLAS reference names
+  engine.py         Gemini calls: fire, judge (with output normalisation), tree, harden
+  scoring.py        CVSS v3.1, KPIs and grade, CVE-style IDs, statistics
+  report.py         CSV and PDF export
+tests/              pytest suite (no API calls)
+```
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest
+```
+
+The tests pin the logic the dashboards report: CVSS v3.1 base scores against reference
+vectors, KPIs and grades, Wilson intervals, chi-square p-values, parsing of the judge's
+JSON (using a fake Gemini client), PDF/CSV export, and the dataset's OWASP/ATLAS IDs.
+GitHub Actions runs them on every push.
+
+## Post-hackathon Changes (2026-10)
+
+Revisiting the hackathon build in October 2026, I made it runnable again, put the core
+logic under test, and fixed what the tests found:
+
+- **Runnable from a fresh clone** — the original Gemini model IDs had been shut down;
+  added pinned requirements, `.env.example`, and a no-key sample mode.
+- **Testable structure** — moved the core logic out of the single 2,300-line `app.py`
+  into the `guardian/` package (no behaviour change), then added the test suite and CI.
+- **PDF report** — generation crashed on non-latin-1 characters with current fpdf2;
+  body text was nearly invisible and CVE IDs were truncated.
+- **CVSS** — the "CVSS-inspired" formula disagreed with CVSS v3.1 on 6 of 8 reference
+  vectors (rounding, scope-dependent Privileges Required); it now matches the spec.
+- **Statistics** — the chi-square p-value used the wrong formula and overstated
+  p-values (χ² = 3.84 was reported as p = 0.17 instead of 0.05).
+- **Hardening comparison** — before/after scores used a different formula from the
+  dashboard, so the same scan showed two different scores.
+- **Judge parsing** — single-letter verdicts such as `"V"` were dropped from every count;
+  the judge's JSON is now normalised.
+- **Taxonomy** — payloads were labelled `:2025` but used the 2023 OWASP numbering, and
+  some MITRE ATLAS IDs pointed at the wrong technique; remapped and checked by tests.
+
 ## My Role
 
 - Designed and implemented the automated red-teaming workflow end to end
@@ -90,7 +163,16 @@ is paired with a remediation suggestion.
 Developed as a hackathon prototype. The goal was to explore an automated
 LLM red-teaming workflow, not to ship a production-grade scanner. Within the time
 available, the bypass and judging logic were not perfected, and results should be
-read as exploratory rather than authoritative.
+read as exploratory rather than authoritative. In particular:
+
+- Verdicts and CVSS vectors come from an LLM judge; the CVSS arithmetic is exact, but
+  the vector it scores is the judge's opinion.
+- Each category has only 2–4 payloads, so per-category rates, Wilson intervals and the
+  chi-square test (a large-sample approximation) are indicative only.
+- Cost figures use fixed per-token prices in `guardian/config.py`, not the selected
+  model's current pricing.
+- Live scans were not re-run after the 2026 changes (they need an API key and quota); the
+  changes are covered by the offline test suite and the sample-data mode.
 
 ## Future Work
 
