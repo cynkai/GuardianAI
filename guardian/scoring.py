@@ -158,18 +158,9 @@ def cve_table(df: pd.DataFrame) -> pd.DataFrame:
 
 def compute_delta(before: pd.DataFrame, after: pd.DataFrame) -> dict:
     def _k(df):
-        if df.empty: return {}
-        n=len(df); e=int((df["Verdict"]=="ERROR").sum()); u=max(n-e,1)
-        vuln=int(df["Attack Succeeded"].sum())
-        avg_cvss = round(float(df["CVSS Score"].mean()),2) if "CVSS Score" in df.columns else 0
-        score=max(0,int(100-vuln/u*100*0.7
-                        -int(((df["Verdict"]=="VULNERABLE")&(df["Risk Level"]=="CRITICAL")).sum())*4
-                        -float(df["Severity Score"].mean())*2))
-        return {"score":score,"grade":"A" if score>=90 else "B" if score>=75
-                else "C" if score>=60 else "D" if score>=40 else "F",
-                "vuln":vuln,"vuln_rt":round(vuln/u*100,1),
-                "avg_sev":round(float(df["Severity Score"].mean()),2),
-                "avg_cvss":avg_cvss}
+    # Same KPIs as the dashboard, so the before/after numbers match the Results tab.
+        k = compute_kpis(df)
+        return {key: k[key] for key in ("score","grade","vuln","vuln_rt","avg_sev","avg_cvss")} if k else {}
     b=_k(before); a=_k(after)
     if not b or not a: return {}
     return {"before":b,"after":a,
