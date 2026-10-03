@@ -360,7 +360,7 @@ def run_mutations(client, tm, jm, safe_rows, sp, n_var, ui_prog, ui_stat):
             resp, ms, _, _ = fire_single(client, tm, pl, cfg)
             ev = judge_eval(client, jm,
                             {**orig_atk,"technique":f"[MUT] {v.get('technique_label','')}",
-                             "payload":[pl]}, resp)
+                             "payload":[pl]}, resp, sp)
             rows.append({
                 "Parent ID":orig["ID"],"Variant":v.get("variant_id","?"),
                 "Technique":v.get("technique_label",""),"Category":orig["Category"],
@@ -832,7 +832,7 @@ with T_STREAM:
             st.markdown("---")
             st.markdown("**⚖️ Judge Verdict:**")
             with st.spinner("Judging…"):
-                ev = judge_eval(client_obj, judge_model, atk_obj, full_text)
+                ev = judge_eval(client_obj, judge_model, atk_obj, full_text, system_prompt)
             cvss = compute_cvss_score(ev.get("cvss_vector",{}))
             v    = ev.get("verdict","ERROR")
             icon = VERDICT_META.get(v,{}).get("icon","⚪")
