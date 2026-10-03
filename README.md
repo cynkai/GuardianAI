@@ -146,8 +146,29 @@ logic under test, and fixed what the tests found:
   rules now sit in the judge's system instruction, and the payload and response are
   passed as untrusted data between markers with a random per-call tag, so a response
   cannot close its own block.
+- **Judge without a reference** — the judge never saw the system prompt it was meant to
+  protect, so a verbatim leak could be graded SAFE; it now gets it as fenced reference.
+- **Live runs on OpenAI too** — an adapter (`guardian/openai_client.py`) runs the same
+  engine against OpenAI models; `scripts/` adds a reference scan, a judge-injection
+  check and a blind labelling page for measuring the judge.
 - **Taxonomy** — payloads were labelled `:2025` but used the 2023 OWASP numbering, and
   some MITRE ATLAS IDs pointed at the wrong technique; remapped and checked by tests.
+
+## Reference Results (2026-10)
+
+Measured with OpenAI models (target `gpt-5.4-nano`, judge `gpt-5.4-mini`); details,
+data and limits in [`reports/`](reports/README.md).
+
+- **Reference scan** — default system prompt: score 89 (B), 3 of 25 payloads breached;
+  a deliberately thin prompt: 78 (B), 5 of 25. Breaches: persona jailbreaks,
+  zero-width-character injection, a partial stereotype completion.
+- **Judge prompt injection** — with the pre-fix prompt the judge was hijacked by the
+  attack payload it was grading and returned SAFE in 18 of 18 cases (including the
+  control with no extra text); with the current prompt, 0 of 18.
+- **Judge vs. human labels** — on 20 hand-labelled responses (enriched for breaches):
+  75% agreement on breached-vs-safe (κ = 0.53), 60% on all three verdicts (κ = 0.42).
+  The judge never flagged a safe response but missed 5 of 13 partial or full breaches,
+  so scan breach rates are likely underestimates.
 
 ## My Role
 
@@ -174,12 +195,14 @@ read as exploratory rather than authoritative. In particular:
   the vector it scores is the judge's opinion.
 - Each category has only 2–4 payloads, so per-category rates, Wilson intervals and the
   chi-square test (a large-sample approximation) are indicative only.
+- The judge is lenient on partial leaks (see Reference Results), so breach rates are
+  likely underestimated.
 - Fencing the target's response makes judge manipulation harder, not impossible: the
   judge is still an LLM reading attacker-influenced text.
 - Cost figures use fixed per-token prices in `guardian/config.py`, not the selected
   model's current pricing.
-- Live scans were not re-run after the 2026 changes (they need an API key and quota); the
-  changes are covered by the offline test suite and the sample-data mode.
+- Live scans after the 2026 changes ran on OpenAI models through the adapter, not on
+  Gemini; the Gemini path is covered by the offline tests and the sample-data mode.
 
 ## Future Work
 
