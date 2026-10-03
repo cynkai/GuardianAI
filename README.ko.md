@@ -69,6 +69,25 @@ JUDGE   평가자 모델 · JSON 판결 + CVSS 벡터
 - Google Gemini API (`google-genai` SDK)
 - Plotly (시각화), fpdf2 (PDF 리포트), pandas / numpy
 
+## 빠른 시작
+
+Python 3.13이 필요합니다(다른 최신 3.x 버전도 동작할 가능성이 높지만 검증하지 않았습니다).
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+- **API 키 없이 둘러보기:** **Results** 탭에서 **Load Sample Results**를 누르면
+  샘플 데이터로 모든 대시보드를 보고 PDF 리포트까지 내보낼 수 있습니다.
+- **실제 스캔**에는 Gemini API 키가 필요합니다. `cp .env.example .env` 후
+  `GEMINI_API_KEY`를 채우거나, 사이드바에 키를 입력하세요. 스캔은 페이로드마다
+  Gemini API를 호출(대상 + 심사)하므로 사용량이 소모됩니다.
+- 모델 기본값은 Google의 `gemini-flash-latest`(대상)와 `gemini-pro-latest`(심사)
+  별칭입니다. 다른 모델을 고정하려면 사이드바에서 **Custom model ID…**를 고르세요.
+
 ## 담당 역할
 
 - 자동 레드팀 워크플로우를 처음부터 끝까지 설계·구현

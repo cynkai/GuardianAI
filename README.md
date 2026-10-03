@@ -71,6 +71,26 @@ JUDGE   model · JSON verdict + CVSS vector
 - Google Gemini API (`google-genai` SDK)
 - Plotly (visualization), fpdf2 (PDF reports), pandas / numpy
 
+## Quick Start
+
+Requires Python 3.13 (other recent 3.x versions likely work but are untested).
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+- **No API key needed to look around:** open the **Results** tab and click
+  **Load Sample Results** to explore every dashboard and export a PDF report with
+  sample data.
+- **Live scans** need a Gemini API key: `cp .env.example .env` and set
+  `GEMINI_API_KEY`, or paste a key into the sidebar. A scan calls the Gemini API
+  for every payload (target + judge), so it uses your quota.
+- Models default to Google's `gemini-flash-latest` (target) and `gemini-pro-latest`
+  (judge) aliases; choose **Custom model ID…** in the sidebar to pin another model.
+
 ## My Role
 
 - Designed and implemented the automated red-teaming workflow end to end

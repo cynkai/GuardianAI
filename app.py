@@ -200,14 +200,17 @@ h3 { color: #c0c0d0 !important; font-size: 1.05rem !important; font-weight: 700 
 # SECTION 1 · CONSTANTS
 # =============================================================================
 
+# The original 2025 preview / 1.5 model IDs have been shut down. The "-latest"
+# aliases track Google's current release, so the defaults keep working; any
+# other model ID can be entered in the sidebar ("Custom model ID…").
 MODEL_REGISTRY = {
-    "gemini-2.5-flash-preview-04-17": "Gemini 2.5 Flash Preview ⚡",
-    "gemini-2.5-pro-preview-03-25":   "Gemini 2.5 Pro Preview 🧠",
-    "gemini-1.5-flash":               "Gemini 1.5 Flash 🔄",
-    "gemini-1.5-pro":                 "Gemini 1.5 Pro 🔄",
+    "gemini-flash-latest":      "Gemini Flash (latest) ⚡",
+    "gemini-pro-latest":        "Gemini Pro (latest) 🧠",
+    "gemini-flash-lite-latest": "Gemini Flash-Lite (latest) 🪶",
 }
-DEFAULT_TARGET = "gemini-2.5-flash-preview-04-17"
-DEFAULT_JUDGE  = "gemini-2.5-pro-preview-03-25"
+CUSTOM_MODEL = "Custom model ID…"
+DEFAULT_TARGET = "gemini-flash-latest"
+DEFAULT_JUDGE  = "gemini-pro-latest"
 
 SAFETY_OFF = [
     types.SafetySetting(category="HARM_CATEGORY_HARASSMENT",        threshold="BLOCK_NONE"),
@@ -1549,8 +1552,16 @@ else:
     st.sidebar.markdown(status_badge("OFFLINE · key required", "off"), unsafe_allow_html=True)
 
 st.sidebar.markdown("---"); st.sidebar.subheader("🤖 Models")
-target_model = st.sidebar.selectbox("Target (SUT)", list(MODEL_REGISTRY), index=0)
-judge_model  = st.sidebar.selectbox("Judge",         list(MODEL_REGISTRY), index=1)
+def model_picker(label: str, default: str) -> str:
+    options = [*MODEL_REGISTRY, CUSTOM_MODEL]
+    choice = st.sidebar.selectbox(label, options, index=options.index(default),
+                                  format_func=lambda m: MODEL_REGISTRY.get(m, m))
+    if choice != CUSTOM_MODEL:
+        return choice
+    return st.sidebar.text_input(f"{label} model ID", value=default, key=f"custom_{label}").strip() or default
+
+target_model = model_picker("Target (SUT)", DEFAULT_TARGET)
+judge_model  = model_picker("Judge", DEFAULT_JUDGE)
 
 st.sidebar.markdown("---"); st.sidebar.subheader("🏰 System Prompt")
 DEFAULT_SP = """\
@@ -2302,10 +2313,10 @@ with T_ETHICS:
 Attack Dataset (26 payloads · 10 OWASP categories)
         │ [ThreadPoolExecutor]
         ▼
-TARGET  gemini-2.5-flash · BLOCK_NONE · system-prompt
+TARGET  gemini-flash-latest · BLOCK_NONE · system-prompt
         │ response + CVSS vector
         ▼
-JUDGE   gemini-2.5-pro · JSON verdict + CVSS vector
+JUDGE   gemini-pro-latest · JSON verdict + CVSS vector
         │
         ├─ CVE IDs (RTAI-YYYY-NNN by CVSS)
         ├─ Adaptive Attack Tree (depth-3 recursive)
