@@ -8,6 +8,7 @@ from .scoring import cve_table
 
 try:
     from fpdf import FPDF
+    from fpdf.enums import XPos, YPos
     HAS_FPDF = True
 except ImportError:
     HAS_FPDF = False
@@ -25,6 +26,7 @@ def _safe(s, n=200):
 
 class RedTeamPDF(FPDF if HAS_FPDF else object):
     R=(220,50,50); DARK=(20,20,20); D2=(35,35,35); LT=(220,220,220); GR=(140,140,140)
+    TX=(45,45,45)   # body text on the white page; LT is for the dark cover band
 
     def header(self):
         self.set_fill_color(*self.DARK); self.rect(0,0,210,14,"F")
@@ -41,12 +43,12 @@ class RedTeamPDF(FPDF if HAS_FPDF else object):
 
     def stitle(self, t):
         self.ln(3); self.set_fill_color(*self.D2); self.set_font("Helvetica","B",10)
-        self.set_text_color(*self.R); self.cell(0,7,f"  {t}",ln=True,fill=True); self.ln(2)
+        self.set_text_color(*self.R); self.cell(0,7,f"  {t}", new_x=XPos.LMARGIN, new_y=YPos.NEXT,fill=True); self.ln(2)
 
     def kv(self, k, v, bold=False):
-        self.set_font("Helvetica","B",9); self.set_text_color(*self.GR); self.cell(52,5,k,ln=False)
-        self.set_font("Helvetica","B" if bold else "",9); self.set_text_color(*self.LT)
-        self.cell(0,5,_safe(v),ln=True)
+        self.set_font("Helvetica","B",9); self.set_text_color(*self.GR); self.cell(52,5,k, new_x=XPos.RIGHT, new_y=YPos.TOP)
+        self.set_font("Helvetica","B" if bold else "",9); self.set_text_color(*self.TX)
+        self.cell(0,5,_safe(v), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
 
 def generate_pdf(df, kpis, target_model, sp, after_df=None, delta=None):
@@ -60,18 +62,18 @@ def generate_pdf(df, kpis, target_model, sp, after_df=None, delta=None):
     pdf.add_page()
     pdf.set_fill_color(*RedTeamPDF.DARK); pdf.rect(0,18,210,80,"F")
     pdf.set_xy(0,30); pdf.set_font("Helvetica","B",26)
-    pdf.set_text_color(*RedTeamPDF.R); pdf.cell(0,12,"RED TEAM AI",align="C",ln=True)
+    pdf.set_text_color(*RedTeamPDF.R); pdf.cell(0,12,"RED TEAM AI",align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.set_font("Helvetica","",12); pdf.set_text_color(*RedTeamPDF.LT)
-    pdf.cell(0,7,"LLM Automated Red-Teaming Security Assessment v7.0",align="C",ln=True)
+    pdf.cell(0,7,"LLM Automated Red-Teaming Security Assessment v7.0",align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.set_font("Helvetica","I",8); pdf.set_text_color(*RedTeamPDF.GR)
-    pdf.cell(0,5,"CMUX x AIM Hackathon 2025  |  OWASP LLM Top 10 (2025)  |  MITRE ATLAS",align="C",ln=True)
+    pdf.cell(0,5,"CMUX x AIM Hackathon 2025  |  OWASP LLM Top 10 (2025)  |  MITRE ATLAS",align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     gc = {"A":(40,180,80),"B":(52,199,89),"C":(255,149,0),"D":(255,107,0),"F":(255,59,48)}\
            .get(kpis.get("grade","F"),(100,100,100))
     pdf.set_xy(80,74); pdf.set_fill_color(*gc)
     pdf.set_font("Helvetica","B",34); pdf.set_text_color(255,255,255)
-    pdf.cell(50,18,kpis.get("grade","F"),align="C",fill=True,ln=True)
+    pdf.cell(50,18,kpis.get("grade","F"),align="C",fill=True, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.set_xy(0,93); pdf.set_font("Helvetica","",9); pdf.set_text_color(*RedTeamPDF.LT)
-    pdf.cell(0,6,f"Security Score: {kpis.get('score',0)}/100",align="C",ln=True)
+    pdf.cell(0,6,f"Security Score: {kpis.get('score',0)}/100",align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(16)
     for lbl,val in [("Report Date",datetime.now().strftime("%Y-%m-%d %H:%M")),
                     ("Target Model",target_model),("Tests",str(kpis.get("n",0))),
@@ -97,34 +99,34 @@ def generate_pdf(df, kpis, target_model, sp, after_df=None, delta=None):
             ("Security Score",str(b["score"]),str(a["score"]),f"{delta['score_delta']:+d}"),
             ("Breach Rate",f"{b['vuln_rt']}%",f"{a['vuln_rt']}%",f"{delta['rate_delta']:+.1f}%"),
         ]:
-            pdf.set_font("Helvetica","B",9); pdf.set_text_color(*RedTeamPDF.GR); pdf.cell(45,5,k,ln=False)
-            pdf.set_font("Helvetica","",9); pdf.set_text_color(*RedTeamPDF.LT)
-            pdf.cell(30,5,_safe(f"{bv} → {av}"),ln=False)
+            pdf.set_font("Helvetica","B",9); pdf.set_text_color(*RedTeamPDF.GR); pdf.cell(45,5,k, new_x=XPos.RIGHT, new_y=YPos.TOP)
+            pdf.set_font("Helvetica","",9); pdf.set_text_color(*RedTeamPDF.TX)
+            pdf.cell(30,5,_safe(f"{bv} → {av}"), new_x=XPos.RIGHT, new_y=YPos.TOP)
             cl = (40,180,80) if (delta["score_delta"]>0 and k=="Security Score") else (220,50,50)
-            pdf.set_text_color(*cl); pdf.set_font("Helvetica","B",9); pdf.cell(0,5,dv,ln=True)
+            pdf.set_text_color(*cl); pdf.set_font("Helvetica","B",9); pdf.cell(0,5,dv, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     # CVE Index
     sec=3; pdf.add_page(); pdf.stitle(f"{sec}. CVE Finding Index")
     cve = cve_table(df)
     pdf.set_fill_color(*RedTeamPDF.D2); pdf.set_font("Helvetica","B",7); pdf.set_text_color(*RedTeamPDF.R)
     for col,w in [("CVE ID",28),("ID",16),("Category",42),("Risk",16),("Verdict",24),("CVSS",18),("Sev",16)]:
-        pdf.cell(w,6,col,fill=True,border=0,ln=False)
+        pdf.cell(w,6,col,fill=True,border=0, new_x=XPos.RIGHT, new_y=YPos.TOP)
     pdf.ln(6)
     for _,row in cve.iterrows():
         if pdf.get_y()>260: pdf.add_page()
         pdf.set_font("Helvetica","B",7); pdf.set_text_color(*RedTeamPDF.R)
-        pdf.cell(28,5,_safe(row.get("CVE ID",""),12),ln=False)
-        pdf.set_text_color(*RedTeamPDF.LT); pdf.set_font("Helvetica","",7)
-        pdf.cell(16,5,_safe(row.get("ID",""),8),ln=False)
-        pdf.cell(42,5,_safe(row.get("Category",""),26),ln=False)
-        pdf.cell(16,5,_safe(row.get("Risk Level",""),8),ln=False)
+        pdf.cell(28,5,_safe(row.get("CVE ID",""),16), new_x=XPos.RIGHT, new_y=YPos.TOP)
+        pdf.set_text_color(*RedTeamPDF.TX); pdf.set_font("Helvetica","",7)
+        pdf.cell(16,5,_safe(row.get("ID",""),8), new_x=XPos.RIGHT, new_y=YPos.TOP)
+        pdf.cell(42,5,_safe(row.get("Category",""),26), new_x=XPos.RIGHT, new_y=YPos.TOP)
+        pdf.cell(16,5,_safe(row.get("Risk Level",""),8), new_x=XPos.RIGHT, new_y=YPos.TOP)
         v=str(row.get("Verdict","ERROR"))
         rgb=VERDICT_META.get(v,{"rgb":(100,100,100)})["rgb"]
         pdf.set_fill_color(*rgb); pdf.set_text_color(255,255,255); pdf.set_font("Helvetica","B",6)
-        pdf.cell(24,5,v,fill=True,ln=False)
-        pdf.set_text_color(*RedTeamPDF.LT); pdf.set_font("Helvetica","",7)
-        pdf.cell(18,5,str(row.get("CVSS Score","")),ln=False)
-        pdf.cell(16,5,str(row.get("Severity Score","")),ln=True)
+        pdf.cell(24,5,v,fill=True, new_x=XPos.RIGHT, new_y=YPos.TOP)
+        pdf.set_text_color(*RedTeamPDF.TX); pdf.set_font("Helvetica","",7)
+        pdf.cell(18,5,str(row.get("CVSS Score","")), new_x=XPos.RIGHT, new_y=YPos.TOP)
+        pdf.cell(16,5,str(row.get("Severity Score","")), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     # Detailed Findings
     sec+=1; pdf.add_page(); pdf.stitle(f"{sec}. Detailed Findings")
@@ -132,13 +134,13 @@ def generate_pdf(df, kpis, target_model, sp, after_df=None, delta=None):
         if pdf.get_y()>240: pdf.add_page()
         pdf.set_fill_color(*RedTeamPDF.D2); pdf.set_font("Helvetica","B",8)
         pdf.set_text_color(*RedTeamPDF.R)
-        pdf.cell(0,6,_safe(f"  {row.get('CVE ID','?')} — {_safe(row.get('Technique',''),55)}"),fill=True,ln=True)
+        pdf.cell(0,6,_safe(f"  {row.get('CVE ID','?')} — {_safe(row.get('Technique',''),55)}"),fill=True, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         for k,v in [("Attack ID",row.get("ID","")),("OWASP",row.get("OWASP Ref","")),
                     ("CVSS Score",f"{row.get('CVSS Score',0)} ({row.get('CVSS Label','')})"),
                     ("Evidence",row.get("Evidence","")),("Reasoning",row.get("Reasoning","")),
                     ("Remediation",row.get("Remediation",""))]:
-            pdf.set_font("Helvetica","B",7); pdf.set_text_color(*RedTeamPDF.GR); pdf.cell(30,4,str(k),ln=False)
-            pdf.set_font("Helvetica","",7); pdf.set_text_color(*RedTeamPDF.LT)
+            pdf.set_font("Helvetica","B",7); pdf.set_text_color(*RedTeamPDF.GR); pdf.cell(30,4,str(k), new_x=XPos.RIGHT, new_y=YPos.TOP)
+            pdf.set_font("Helvetica","",7); pdf.set_text_color(*RedTeamPDF.TX)
             pdf.multi_cell(0,4,_safe(str(v),160))
             pdf.set_x(pdf.l_margin)  # fpdf2 leaves x at the right edge after multi_cell
         pdf.ln(2)

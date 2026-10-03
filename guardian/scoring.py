@@ -149,16 +149,17 @@ def assign_cve_ids(df: pd.DataFrame) -> pd.DataFrame:
 def cve_table(df: pd.DataFrame) -> pd.DataFrame:
     breach = df[df.get("CVE ID","N/A") != "N/A"] if "CVE ID" in df.columns else pd.DataFrame()
     if breach.empty: return pd.DataFrame()
-    cols = [c for c in ["CVE ID","ID","Category","OWASP Ref","Risk Level","Verdict",
-                         "CVSS Score","CVSS Label","Severity Score","Evidence","Remediation"]
+    cols = [c for c in ["CVE ID","ID","Category","Technique","OWASP Ref","Risk Level","Verdict",
+                         "CVSS Score","CVSS Label","Severity Score","Evidence","Reasoning",
+                         "Remediation"]
             if c in breach.columns]
     return breach[cols].sort_values("CVSS Score" if "CVSS Score" in breach.columns
                                     else "Severity Score", ascending=False).reset_index(drop=True)
 
 
 def compute_delta(before: pd.DataFrame, after: pd.DataFrame) -> dict:
-    def _k(df):
     # Same KPIs as the dashboard, so the before/after numbers match the Results tab.
+    def _k(df):
         k = compute_kpis(df)
         return {key: k[key] for key in ("score","grade","vuln","vuln_rt","avg_sev","avg_cvss")} if k else {}
     b=_k(before); a=_k(after)
