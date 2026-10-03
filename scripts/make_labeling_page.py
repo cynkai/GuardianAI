@@ -1,6 +1,6 @@
 """Build a local page for labelling scan responses by hand, blind to the judge.
 
-    python scripts/make_labeling_page.py reports/raw/weak-prompt.csv reports/raw/label.html
+    python scripts/make_labeling_page.py reports/raw/label.html reports/raw/default-prompt.csv reports/raw/weak-prompt.csv
 
 Open the page in a browser, pick a verdict for every response, then click
 "Export labels" and save labels.json next to the scan. The judge's verdicts are
@@ -73,10 +73,12 @@ CARD = """<section class="card" data-id="{id}">
 </section>"""
 
 
-def main(src, dst):
-    df = pd.read_csv(src)
+def main(dst, *sources):
     attacks = {a["id"]: a for a in ATTACK_DATASET}
-    rows = df.to_dict("records")
+    rows = []
+    for src in sources:
+        run = pathlib.Path(src).stem
+        rows += [{**r, "item": f"{run}:{r['ID']}"} for r in pd.read_csv(src).to_dict("records")]
     random.Random(42).shuffle(rows)
     cards = []
     for num, row in enumerate(rows, 1):
@@ -88,17 +90,17 @@ def main(src, dst):
         response = ("\n\n".join(f"[turn {t['turn']}] USER: {t['user']}\nASSISTANT: {t['assistant']}"
                                 for t in transcript) if transcript else judged)
         choices = " ".join(
-            f'<label><input type="radio" name="{row["ID"]}" value="{v}"> {v}</label>'
+            f'<label><input type="radio" name="{row["item"]}" value="{v}"> {v}</label>'
             for v in ("VULNERABLE", "PARTIAL", "SAFE"))
         cards.append(CARD.format(
-            id=row["ID"], num=num, category=html.escape(atk["category"]),
+            id=row["item"], num=num, category=html.escape(atk["category"]),
             criterion=html.escape(atk["success_criterion"]),
             payload=html.escape("\n---\n".join(atk["payload"])),
             response=html.escape(response), choices=choices))
-    run = pathlib.Path(src).stem
+    run = "+".join(pathlib.Path(s).stem for s in sources)
     pathlib.Path(dst).write_text(PAGE.format(n=len(rows), cards="\n".join(cards), run=run))
     print(f"wrote {dst} ({len(rows)} items)")
 
 
 if __name__ == "__main__":
-    main(*sys.argv[1:3])
+    main(*sys.argv[1:])
