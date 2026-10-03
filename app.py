@@ -1185,8 +1185,14 @@ def compute_delta(before: pd.DataFrame, after: pd.DataFrame) -> dict:
 # SECTION 17 · PDF REPORT GENERATOR
 # =============================================================================
 
+# The PDF uses fpdf's core Helvetica font, which only covers latin-1. Map common
+# typographic characters to ASCII first so they don't degrade to "?".
+_PDF_ASCII = str.maketrans({"—": "-", "–": "-", "→": "->", "←": "<-", "…": "...",
+                            "‘": "'", "’": "'", "“": '"', "”": '"', "·": "|", "•": "-"})
+
+
 def _safe(s, n=200):
-    return str(s)[:n].encode("latin-1","replace").decode("latin-1")
+    return str(s).translate(_PDF_ASCII)[:n].encode("latin-1","replace").decode("latin-1")
 
 
 class RedTeamPDF(FPDF if HAS_FPDF else object):
@@ -1265,7 +1271,7 @@ def generate_pdf(df, kpis, target_model, sp, after_df=None, delta=None):
         ]:
             pdf.set_font("Helvetica","B",9); pdf.set_text_color(*RedTeamPDF.GR); pdf.cell(45,5,k,ln=False)
             pdf.set_font("Helvetica","",9); pdf.set_text_color(*RedTeamPDF.LT)
-            pdf.cell(30,5,f"{bv} → {av}",ln=False)
+            pdf.cell(30,5,_safe(f"{bv} → {av}"),ln=False)
             cl = (40,180,80) if (delta["score_delta"]>0 and k=="Security Score") else (220,50,50)
             pdf.set_text_color(*cl); pdf.set_font("Helvetica","B",9); pdf.cell(0,5,dv,ln=True)
 
@@ -1298,7 +1304,7 @@ def generate_pdf(df, kpis, target_model, sp, after_df=None, delta=None):
         if pdf.get_y()>240: pdf.add_page()
         pdf.set_fill_color(*RedTeamPDF.D2); pdf.set_font("Helvetica","B",8)
         pdf.set_text_color(*RedTeamPDF.R)
-        pdf.cell(0,6,f"  {row.get('CVE ID','?')} — {_safe(row.get('Technique',''),55)}",fill=True,ln=True)
+        pdf.cell(0,6,_safe(f"  {row.get('CVE ID','?')} — {_safe(row.get('Technique',''),55)}"),fill=True,ln=True)
         for k,v in [("Attack ID",row.get("ID","")),("OWASP",row.get("OWASP Ref","")),
                     ("CVSS Score",f"{row.get('CVSS Score',0)} ({row.get('CVSS Label','')})"),
                     ("Evidence",row.get("Evidence","")),("Reasoning",row.get("Reasoning","")),
@@ -1306,6 +1312,7 @@ def generate_pdf(df, kpis, target_model, sp, after_df=None, delta=None):
             pdf.set_font("Helvetica","B",7); pdf.set_text_color(*RedTeamPDF.GR); pdf.cell(30,4,str(k),ln=False)
             pdf.set_font("Helvetica","",7); pdf.set_text_color(*RedTeamPDF.LT)
             pdf.multi_cell(0,4,_safe(str(v),160))
+            pdf.set_x(pdf.l_margin)  # fpdf2 leaves x at the right edge after multi_cell
         pdf.ln(2)
 
     return bytes(pdf.output())
