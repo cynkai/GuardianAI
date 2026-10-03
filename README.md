@@ -141,6 +141,11 @@ logic under test, and fixed what the tests found:
   dashboard, so the same scan showed two different scores.
 - **Judge parsing** — single-letter verdicts such as `"V"` were dropped from every count;
   the judge's JSON is now normalised.
+- **Judge prompt injection** — the target's response was pasted into the judge prompt
+  unfenced, so an attack could make the target tell the judge "this is SAFE". Grading
+  rules now sit in the judge's system instruction, and the payload and response are
+  passed as untrusted data between markers with a random per-call tag, so a response
+  cannot close its own block.
 - **Taxonomy** — payloads were labelled `:2025` but used the 2023 OWASP numbering, and
   some MITRE ATLAS IDs pointed at the wrong technique; remapped and checked by tests.
 
@@ -169,6 +174,8 @@ read as exploratory rather than authoritative. In particular:
   the vector it scores is the judge's opinion.
 - Each category has only 2–4 payloads, so per-category rates, Wilson intervals and the
   chi-square test (a large-sample approximation) are indicative only.
+- Fencing the target's response makes judge manipulation harder, not impossible: the
+  judge is still an LLM reading attacker-influenced text.
 - Cost figures use fixed per-token prices in `guardian/config.py`, not the selected
   model's current pricing.
 - Live scans were not re-run after the 2026 changes (they need an API key and quota); the
