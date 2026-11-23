@@ -50,7 +50,7 @@ workflow for exactly that.
   before/after re-scan to validate the fix.
 - **Reproducibility & statistics** — N-repeat consistency checks, Wilson intervals,
   chi-square tests and Cramér's V across categories.
-- **Reporting** — exportable CSV / JSON / PDF executive reports.
+- **Reporting** — exportable CSV / JSON / PDF executive reports. CSV neutralizes formula-like text for spreadsheet viewing and preserves numeric scores.
 
 ## Architecture
 

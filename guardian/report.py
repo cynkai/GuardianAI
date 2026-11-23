@@ -148,5 +148,19 @@ def generate_pdf(df, kpis, target_model, sp, after_df=None, delta=None):
     return bytes(pdf.output())
 
 
+def _safe_csv_cell(value):
+    # A quoted CSV field can still be interpreted as a formula by a spreadsheet.
+    if isinstance(value, str) and (
+        value.startswith(("\t", "\r", "\n")) or value.lstrip().startswith(("=", "+", "-", "@"))
+    ):
+        return "'" + value
+    return value
+
+
 def df_to_csv(df):
-    buf=io.StringIO(); df.to_csv(buf,index=False); return buf.getvalue().encode()
+    """Export report text without letting spreadsheet readers execute it."""
+    safe = df.map(_safe_csv_cell)
+    safe.columns = [_safe_csv_cell(column) for column in df.columns]
+    buf = io.StringIO()
+    safe.to_csv(buf, index=False, lineterminator="\r\n")
+    return buf.getvalue().encode("utf-8")
