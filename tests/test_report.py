@@ -1,3 +1,6 @@
+import csv
+import io
+
 import pandas as pd
 
 from guardian.report import _safe, df_to_csv, generate_pdf
@@ -29,3 +32,18 @@ def test_csv_export_round_trips():
     df = build_sample_scan_df()
     back = pd.read_csv(pd.io.common.BytesIO(df_to_csv(df)))
     assert list(back.columns) == list(df.columns) and len(back) == len(df)
+
+
+def test_csv_export_treats_generated_text_as_spreadsheet_data():
+    evidence = ["=1+1", "  +note", "- leading bullet", "@summary", "\ttext", "\rtext",
+                "\ntext", "한국어, \"quoted\"\nsecond line", None]
+    df = pd.DataFrame({"=heading": evidence, "Score": range(-4, 5)})
+
+    rows = list(csv.reader(io.StringIO(df_to_csv(df).decode())))
+
+    assert rows[0] == ["'=heading", "Score"]
+    assert [row[0] for row in rows[1:]] == [
+        *["'" + value for value in evidence[:7]], evidence[7], "",
+    ]
+    assert [row[1] for row in rows[1:]] == [str(value) for value in range(-4, 5)]
+    assert df.iloc[0, 0] == "=1+1"
