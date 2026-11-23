@@ -3,6 +3,7 @@ import io
 
 import pandas as pd
 
+from guardian import report
 from guardian.report import _safe, df_to_csv, generate_pdf
 from guardian.scoring import build_sample_scan_df, compute_delta, compute_kpis
 
@@ -26,6 +27,25 @@ def test_pdf_report_renders_with_a_hardening_delta_and_unicode_findings():
     pdf = generate_pdf(df, compute_kpis(df), "m", "sp", after_df=after,
                        delta=compute_delta(df, after))
     assert pdf.startswith(b"%PDF-")
+
+
+def test_pdf_preserves_long_finding_details_across_pages(monkeypatch):
+    class UncompressedPDF(report.RedTeamPDF):
+        def __init__(self):
+            super().__init__()
+            self.set_compression(False)
+
+    monkeypatch.setattr(report, "RedTeamPDF", UncompressedPDF)
+    df = build_sample_scan_df()
+    finding = df.index[df["Verdict"].isin(["VULNERABLE", "PARTIAL"])][0]
+    df.loc[finding, "Evidence"] = ("A detailed observation. " * 450) + "Evidence ends here"
+    df.loc[finding, "Remediation"] = ("Check the documented configuration. " * 20) + "Remediation ends here"
+
+    pdf = generate_pdf(df, compute_kpis(df), "m", "sp")
+
+    assert pdf.count(b"/Type /Page\n") > 4
+    assert b"Evidence ends here" in pdf
+    assert b"Remediation ends here" in pdf
 
 
 def test_csv_export_round_trips():
