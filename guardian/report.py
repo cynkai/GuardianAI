@@ -20,8 +20,8 @@ _PDF_ASCII = str.maketrans({"—": "-", "–": "-", "→": "->", "←": "<-", "�
                             "‘": "'", "’": "'", "“": '"', "”": '"', "·": "|", "•": "-"})
 
 
-def _safe(s, n=200):
-    return str(s).translate(_PDF_ASCII)[:n].encode("latin-1","replace").decode("latin-1")
+def _safe(s, n: int | None = 200):
+    return str(s).translate(_PDF_ASCII)[:n].encode("latin-1", "replace").decode("latin-1")
 
 
 class RedTeamPDF(FPDF if HAS_FPDF else object):
@@ -48,7 +48,7 @@ class RedTeamPDF(FPDF if HAS_FPDF else object):
     def kv(self, k, v, bold=False):
         self.set_font("Helvetica","B",9); self.set_text_color(*self.GR); self.cell(52,5,k, new_x=XPos.RIGHT, new_y=YPos.TOP)
         self.set_font("Helvetica","B" if bold else "",9); self.set_text_color(*self.TX)
-        self.cell(0,5,_safe(v), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        self.multi_cell(self.epw - 52, 5, _safe(v, None), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
 
 def generate_pdf(df, kpis, target_model, sp, after_df=None, delta=None):
@@ -134,15 +134,15 @@ def generate_pdf(df, kpis, target_model, sp, after_df=None, delta=None):
         if pdf.get_y()>240: pdf.add_page()
         pdf.set_fill_color(*RedTeamPDF.D2); pdf.set_font("Helvetica","B",8)
         pdf.set_text_color(*RedTeamPDF.R)
-        pdf.cell(0,6,_safe(f"  {row.get('CVE ID','?')} — {_safe(row.get('Technique',''),55)}"),fill=True, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        title = _safe(f"  {row.get('CVE ID', '?')} — {row.get('Technique', '')}", None)
+        pdf.multi_cell(pdf.epw, 6, title, fill=True, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         for k,v in [("Attack ID",row.get("ID","")),("OWASP",row.get("OWASP Ref","")),
                     ("CVSS Score",f"{row.get('CVSS Score',0)} ({row.get('CVSS Label','')})"),
                     ("Evidence",row.get("Evidence","")),("Reasoning",row.get("Reasoning","")),
                     ("Remediation",row.get("Remediation",""))]:
             pdf.set_font("Helvetica","B",7); pdf.set_text_color(*RedTeamPDF.GR); pdf.cell(30,4,str(k), new_x=XPos.RIGHT, new_y=YPos.TOP)
             pdf.set_font("Helvetica","",7); pdf.set_text_color(*RedTeamPDF.TX)
-            pdf.multi_cell(0,4,_safe(str(v),160))
-            pdf.set_x(pdf.l_margin)  # fpdf2 leaves x at the right edge after multi_cell
+            pdf.multi_cell(pdf.epw - 30, 4, _safe(v, None), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         pdf.ln(2)
 
     return bytes(pdf.output())
